@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>고양이 탐정 치즈의 추리 탈출!</title>
+  <!-- Tailwind CSS 로드 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Jua & Noto Sans KR -->
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* 게임 전용 커스텀 스타일 및 애니메이션 */
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #FFF9F2;
+      background-image: radial-gradient(#F3E2CE 2px, transparent 2px);
+      background-size: 28px 28px;
+      user-select: none;
+    }
+
+    .font-jua {
+      font-family: 'Jua', sans-serif;
+    }
+
+    /* 고양이 둥실둥실 애니메이션 */
+    @keyframes floatCat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-cat {
+      animation: floatCat 2.8s ease-in-out infinite;
+    }
+
+    /* 오답 시 흔들림 애니메이션 */
+    @keyframes shakeBox {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .animate-shake {
+      animation: shakeBox 0.4s ease-in-out;
+    }
+
+    /* 정답 시 통통 튀는 애니메이션 */
+    @keyframes popBounce {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    .animate-pop {
+      animation: popBounce 0.35s ease-out;
+    }
+
+    /* 국어 지문 속 클릭 가능한 단서 칩 */
+    .clue-chip {
+      display: inline-block;
+      background-color: #FFFFFF;
+      border: 2px solid #93C5FD;
+      border-radius: 10px;
+      padding: 1px 9px;
+      margin: 2px 2px;
+      font-weight: 700;
+      color: #1E3A8A;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      box-shadow: 0 2px 0 #BFDBFE;
+    }
+
+    .clue-chip:hover {
+      background-color: #EFF6FF;
+      transform: translateY(-1px);
+    }
+
+    /* 클릭해서 노란 형광펜 밑줄이 그어진 상태 */
+    .clue-chip.checked {
+      background-color: #FEF08A;
+      border-color: #F59E0B;
+      color: #92400E;
+      box-shadow: 0 2px 0 #FBBF24;
+      text-decoration: underline wavy #EA580C 2px;
+      text-underline-offset: 4px;
+      transform: scale(1.03);
+    }
+
+    /* 입체감 있는 게임 버튼 스타일 */
+    .btn-3d-orange {
+      background: linear-gradient(180deg, #FFA94D 0%, #FF922B 100%);
+      box-shadow: 0 5px 0 #D9480F;
+      transition: all 0.1s ease;
+    }
+    .btn-3d-orange:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #D9480F;
+    }
+
+    .btn-3d-blue {
+      background: linear-gradient(180deg, #4DABF7 0%, #339AF0 100%);
+      box-shadow: 0 5px 0 #1864AB;
+      transition: all 0.1s ease;
+    }
+    .btn-3d-blue:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #1864AB;
+    }
+
+    .card-easy {
+      background: linear-gradient(135deg, #E6FCF5 0%, #C3FAE8 100%);
+      border: 3px solid #63E6BE;
+      box-shadow: 0 7px 0 #20C997;
+      transition: transform 0.15s ease;
+    }
+    .card-easy:hover {
+      transform: translateY(-4px);
+    }
+    .card-easy:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #20C997;
+    }
+
+    .card-hard {
+      background: linear-gradient(135deg, #FFF0F6 0%, #FFDEEB 100%);
+      border: 3px solid #FAA2C1;
+      box-shadow: 0 7px 0 #F06595;
+      transition: transform 0.15s ease;
+    }
+    .card-hard:hover {
+      transform: translateY(-4px);
+    }
+    .card-hard:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #F06595;
+    }
+
+    /* 숫자 입력칸 화살표 제거 */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 sm:p-6 text-slate-800">
+
+  <!-- 메인 게임 프레임 -->
+  <main class="w-full max-w-3xl bg-white rounded-[32px] border-4 border-[#FFD8A8] shadow-[0_14px_35px_rgba(255,146,43,0.16)] p-5 sm:p-8 relative overflow-hidden">
+    
+    <!-- 상단 내비게이션 및 진행 표시줄 -->
+    <header class="flex items-center justify-between gap-2 sm:gap-3 pb-4 mb-5 border-b-2 border-[#FFF0D9]">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="modeBadge" class="hidden px-3 py-1 rounded-full text-xs sm:text-sm font-bold text-white shadow-sm">
+          🌱 기초 탐정
+        </span>
+        <span id="stageBadge" class="bg-[#FFF4E6] text-[#D9480F] border-2 border-[#FFC078] px-3.5 py-1 rounded-full text-sm sm:text-base font-bold whitespace-nowrap">
+          코스 선택
+        </span>
+      </div>
+
+      <!-- 진행률 바 -->
+      <div class="flex-1 max-w-xs bg-slate-100 h-4 rounded-full overflow-hidden border-2 border-slate-200 mx-1">
+        <div id="progressBar" class="h-full w-0 bg-gradient-to-r from-[#FFA94D] to-[#FF6B6B] rounded-full transition-all duration-500"></div>
+      </div>
+
+      <!-- 소리 토글 및 홈 버튼 -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" id="soundBtn" onclick="toggleSound()" title="소리 켜기/끄기"
+          class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 flex items-center justify-center text-lg sm:text-xl transition active:scale-95">
+          🔊
+        </button>
+        <button type="button" id="homeBtn" onclick="goHome()" title="처음 화면으로"
+          class="px-3 h-10 sm:h-11 rounded-full bg-slate-50 hover:bg-orange-50 border-2 border-slate-200 flex items-center justify-center gap-1 text-sm font-bold text-slate-700 transition active:scale-95">
+          <span>🏠</span>
+          <span class="hidden sm:inline">처음으로</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- 1. 시작 및 난이도 선택 화면 -->
+    <!-- ========================================== -->
+    <section id="startScreen" class="text-center py-2">
+      <div id="startCatSvg" class="w-32 h-32 sm:w-36 sm:h-36 mx-auto mb-2 animate-cat"></div>
+      
+      <h1 class="font-jua text-3xl sm:text-4xl text-[#D9480F] leading-snug mb-3">
+        고양이 탐정 치즈의<br class="sm:hidden"> 추리 탈출!
+      </h1>
+      
+      <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto mb-7 break-keep">
+        야옹! 간식 창고 열쇠가 사라졌어! <br>
+        10개의 <strong>사건 이야기</strong>를 끝까지 잘 읽고, <strong>숨겨진 비밀번호</strong>를 맞혀 탈출하자!
+      </p>
+
+      <!-- 두 가지 난이도 선택 카드 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 text-left">
+        <button type="button" onclick="startGame('easy')" class="card-easy rounded-3xl p-5 sm:p-6 cursor-pointer">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-3xl sm:text-4xl">🌱</span>
+            <span class="bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full">15 이하 연산</span>
+          </div>
+          <h2 class="font-jua text-2xl text-emerald-900 mb-1.5">기초 탐정 코스 (쉬움)</h2>
+          <p class="text-sm sm:text-base text-emerald-800 leading-relaxed break-keep">
+            • 총 10단계 추리 이야기<br>
+            • 합과 차가 <strong>15 이하</strong>인 기초 계산<br>
+            • 이야기 속 핵심 낱말을 찾아요
+          </p>
+        </button>
+
+        <button type="button" onclick="startGame('hard')" class="card-hard rounded-3xl p-5 sm:p-6 cursor-pointer">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-3xl sm:text-4xl">🚀</span>
+            <span class="bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">20 넘는 연산</span>
+          </div>
+          <h2 class="font-jua text-2xl text-rose-900 mb-1.5">베테랑 탐정 코스 (도전)</h2>
+          <p class="text-sm sm:text-base text-rose-800 leading-relaxed break-keep">
+            • 총 10단계 추리 이야기<br>
+            • 합이 <strong>20을 넘는</strong> 두 자리 수 계산<br>
+            • 숨은 조건과 함정을 구별해요
+          </p>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. 게임 플레이 화면 (1~10단계) -->
+    <!-- ========================================== -->
+    <section id="playScreen" class="hidden">
+      <!-- 고양이 탐정 대사창 -->
+      <div class="flex items-center gap-4 bg-[#FFF8EE] border-2 border-dashed border-[#FFC078] rounded-2xl p-4 mb-5">
+        <div id="playCatSvg" class="w-20 h-20 sm:w-24 sm:h-24 shrink-0 animate-cat"></div>
+        <div>
+          <span class="inline-block bg-[#FF922B] text-white text-xs sm:text-sm font-bold px-3 py-0.5 rounded-full mb-1.5">
+            고양이 탐정 치즈
+          </span>
+          <p id="catSpeech" class="text-base sm:text-lg font-medium text-slate-800 leading-snug break-keep">
+            이야기를 끝까지 꼼꼼히 읽어보자!
+          </p>
+        </div>
+      </div>
+
+      <!-- 국어 독해 영역 -->
+      <div class="bg-[#F0F7FF] border-2 border-[#BAE0FF] rounded-3xl p-5 sm:p-6 mb-5">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-2.5">
+          <span class="bg-[#D0EBFF] text-[#1864AB] text-xs sm:text-sm font-bold px-3 py-1 rounded-xl">
+            📖 1단계: 사건 이야기 읽기 (국어 독해)
+          </span>
+          <span class="text-xs sm:text-sm font-bold text-blue-600">
+            💡 단서를 누르면 노란 밑줄이 그어져요!
+          </span>
+        </div>
+
+        <h2 id="storyTitle" class="font-jua text-xl sm:text-2xl text-[#0B5394] mb-3"></h2>
+        <div id="storyBody" class="text-lg sm:text-xl leading-[1.95] text-slate-800 break-keep"></div>
+      </div>
+
+      <!-- 수학 추리 영역 -->
+      <div class="bg-[#F3FBF7] border-2 border-[#B2F2BB] rounded-3xl p-5 sm:p-6">
+        <span class="inline-block bg-[#D3F9D8] text-[#2B8A3E] text-xs sm:text-sm font-bold px-3 py-1 rounded-xl mb-2.5">
+          🔢 2단계: 암호 숫자 맞히기 (수학 추리)
+        </span>
+        
+        <p id="quizTitle" class="text-lg sm:text-xl font-bold text-slate-800 leading-snug mb-4 break-keep"></p>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <input type="number" id="answerInput" inputmode="numeric" placeholder="정답"
+            class="w-32 sm:w-36 h-14 text-2xl sm:text-3xl font-bold text-center bg-white border-3 border-[#69DB7C] rounded-2xl focus:outline-none focus:border-[#FF922B] focus:ring-4 focus:ring-orange-200 transition" />
+          
+          <button type="button" onclick="checkAnswer()"
+            class="btn-3d-orange text-white font-jua text-xl sm:text-2xl px-7 h-14 rounded-2xl cursor-pointer flex items-center gap-2">
+            <span>🔓</span>
+            <span>자물쇠 열기</span>
+          </button>
+        </div>
+
+        <!-- 정답 / 오답 피드백 메시지 -->
+        <div id="feedbackBox" class="hidden mt-4 p-3.5 rounded-2xl text-base sm:text-lg font-bold break-keep"></div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. 10단계 탈출 성공 & 임명장 화면 -->
+    <!-- ========================================== -->
+    <section id="endScreen" class="hidden text-center py-3">
+      <div id="endCatSvg" class="w-32 h-32 sm:w-36 sm:h-36 mx-auto mb-2 animate-cat"></div>
+      
+      <h1 class="font-jua text-3xl sm:text-4xl text-[#D9480F] mb-3">
+        🎉 야옹! 10단계 모두 탈출 성공!
+      </h1>
+
+      <!-- 명예 탐정 임명장 카드 -->
+      <div class="bg-gradient-to-b from-[#FFF9DB] to-[#FFF3BF] border-4 border-[#FCC419] rounded-3xl p-6 max-w-lg mx-auto my-5 shadow-md relative">
+        <div class="text-4xl sm:text-5xl mb-2">🏅</div>
+        <div id="certificateTitle" class="font-jua text-2xl sm:text-3xl text-[#B45309] mb-2">
+          명예 고양이 탐정 임명장
+        </div>
+        <p class="text-base sm:text-lg text-amber-900 leading-relaxed break-keep">
+          위 학생은 10편의 사건 이야기를 끝까지 꼼꼼히 읽고<br>
+          정확한 추리와 계산으로 간식 창고 열쇠를 찾아내었기에<br>
+          <strong>최고의 명예 고양이 탐정</strong>으로 임명합니다!
+        </p>
+      </div>
+
+      <p class="text-base sm:text-lg text-slate-600 mb-6 break-keep">
+        글도 잘 읽고 계산도 척척 해내는 네가 정말 최고야! 🐾
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-3">
+        <button type="button" onclick="restartCurrent()"
+          class="btn-3d-orange text-white font-jua text-xl px-6 py-3.5 rounded-2xl cursor-pointer">
+          🔄 같은 코스 다시하기
+        </button>
+        <button type="button" onclick="goHome()"
+          class="btn-3d-blue text-white font-jua text-xl px-6 py-3.5 rounded-2xl cursor-pointer">
+          🏠 다른 난이도 선택하기
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // 1. 귀여운 고양이 탐정 치즈 SVG 일러스트 생성
+    // ==========================================
+    function getCatSVG(isHappy) {
+      const eyes = isHappy
+        ? `<path d="M33 53 Q40 44 47 53" stroke="#2F3542" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+           <path d="M53 53 Q60 44 67 53" stroke="#2F3542" stroke-width="3.8" fill="none" stroke-linecap="round"/>`
+        : `<circle cx="40" cy="51" r="4.8" fill="#2F3542"/>
+           <circle cx="60" cy="51" r="4.8" fill="#2F3542"/>
+           <circle cx="41.5" cy="49.2" r="1.6" fill="#FFFFFF"/>
+           <circle cx="61.5" cy="49.2" r="1.6" fill="#FFFFFF"/>`;
+
+      return `
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm">
+          <!-- 왼쪽/오른쪽 귀 -->
+          <polygon points="19,43 25,13 46,32" fill="#FFB142" stroke="#E67E22" stroke-width="2.5" stroke-linejoin="round"/>
+          <polygon points="81,43 75,13 54,32" fill="#FFB142" stroke="#E67E22" stroke-width="2.5" stroke-linejoin="round"/>
+          <polygon points="24,39 28,20 41,32" fill="#FFD8A8"/>
+          <polygon points="76,39 72,20 59,32" fill="#FFD8A8"/>
+          <!-- 얼굴 -->
+          <ellipse cx="50" cy="57" rx="35" ry="30" fill="#FFC048" stroke="#E67E22" stroke-width="2.5"/>
+          <!-- 이마 줄무늬 -->
+          <path d="M45 29 L45 37 M50 28 L50 39 M55 29 L55 37" stroke="#E67E22" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- 분홍 볼터치 -->
+          <ellipse cx="29" cy="60" rx="5.5" ry="3.2" fill="#FF7979" opacity="0.6"/>
+          <ellipse cx="71" cy="60" rx="5.5" ry="3.2" fill="#FF7979" opacity="0.6"/>
+          <!-- 눈 -->
+          ${eyes}
+          <!-- 코와 입 -->
+          <polygon points="47,58 53,58 50,62" fill="#FF6B6B"/>
+          <path d="M50 62 Q44 68 39 64 M50 62 Q56 68 61 64" stroke="#2F3542" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- 수염 -->
+          <line x1="11" y1="55" x2="25" y2="57" stroke="#8395A7" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="11" y1="63" x2="25" y2="62" stroke="#8395A7" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="89" y1="55" x2="75" y2="57" stroke="#8395A7" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="89" y1="63" x2="75" y2="62" stroke="#8395A7" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- 보라색 탐정 모자 -->
+          <ellipse cx="50" cy="24" rx="23" ry="5.5" fill="#7950F2"/>
+          <path d="M32 24 Q50 7 68 24 Z" fill="#9775FA" stroke="#5F3DC4" stroke-width="2"/>
+          <rect x="33" y="20" width="34" height="3.5" rx="1.5" fill="#FCC419"/>
+        </svg>
+      `;
+    }
+
+    // 초기 고양이 일러스트 삽입
+    document.getElementById('startCatSvg').innerHTML = getCatSVG(false);
+    document.getElementById('playCatSvg').innerHTML = getCatSVG(false);
+    document.getElementById('endCatSvg').innerHTML = getCatSVG(true);
+
+    // ==========================================
+    // 2. 안전한 웹 오디오 효과음 시스템
+    // ==========================================
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(540, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'ok') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);      // 도
+          osc.frequency.setValueAtTime(659.25, now + 0.09); // 미
+          osc.frequency.setValueAtTime(783.99, now + 0.18); // 솔
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } else if (type === 'err') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(230, now);
+          osc.frequency.setValueAtTime(185, now + 0.12);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        } else if (type === 'win') {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'triangle';
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, now + i * 0.12);
+            g.gain.setValueAtTime(0.12, now + i * 0.12);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.38);
+            o.start(now + i * 0.12);
+            o.stop(now + i * 0.12 + 0.38);
+          });
+        }
+      } catch (err) {
+        // 오디오 차단 환경에서도 게임 흐름에 영향 없도록 무시
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) playSound('click');
+    }
+
+    // ==========================================
+    // 3. 난이도별 10단계 추리 문제 데이터베이스
+    // ==========================================
+    const gameData = {
+      // 🌱 기초 탐정 코스 (쉬움: 합과 차가 15 이하)
+      easy: [
+        {
+          title: "사건 1. 현관 앞 수상한 상자",
+          cat: "상자 속에 무엇이 들어있는지 이야기를 잘 읽어보자!",
+          story: "아침에 현관 앞에 커다란 상자가 놓여 있었습니다. 상자를 열어 보니 맛있는 <span class='clue-chip' onclick='toggleClue(this)'>고구마 5개</span>와 동글동글한 <span class='clue-chip' onclick='toggleClue(this)'>밤 4개</span>가 들어 있었습니다. 장난감 공 3개도 있었지만, <span class='clue-chip' onclick='toggleClue(this)'>먹을 수 있는 간식</span>만 세어 문을 열어야 합니다.",
+          quiz: "먹을 수 있는 간식은 모두 몇 개인가요?",
+          answer: 9,
+          hint: "장난감 공 3개는 빼고, 고구마(5개)와 밤(4개)만 더해보세요!"
+        },
+        {
+          title: "사건 2. 강아지 보리의 뼈다귀",
+          cat: "강아지 보리가 무슨 말을 했는지 끝까지 들어보자!",
+          story: "강아지 보리가 꼬리를 흔들며 말했습니다. \"치즈야, 내가 어제 <span class='clue-chip' onclick='toggleClue(this)'>뼈다귀 6개</span>를 모았는데, 오늘 아침에 <span class='clue-chip' onclick='toggleClue(this)'>5개를 더 찾아왔어!</span> 물그릇 2개는 빼고, 내가 모은 뼈다귀 개수를 맞혀봐!\"",
+          quiz: "보리가 어제와 오늘 모은 뼈다귀는 모두 몇 개인가요?",
+          answer: 11,
+          hint: "물그릇 2개는 빼고, 어제 모은 6개와 오늘 찾은 5개를 더해보세요!"
+        },
+        {
+          title: "사건 3. 식탁 위의 멸치 도둑",
+          cat: "참새가 몇 마리를 물고 갔는지 잘 계산해 보자!",
+          story: "엄마가 부엌 식탁에 <span class='clue-chip' onclick='toggleClue(this)'>멸치 13마리</span>를 담아 두셨습니다. 그런데 창문으로 날아온 <span class='clue-chip' onclick='toggleClue(this)'>참새가 4마리를 물고</span> 날아갔습니다. 접시에 <span class='clue-chip' onclick='toggleClue(this)'>남은 멸치</span>의 개수가 비밀번호입니다.",
+          quiz: "참새가 가져가고 접시에 남은 멸치는 몇 마리인가요?",
+          answer: 9,
+          hint: "처음 13마리에서 참새가 가져간 4마리를 빼보세요! (13 - 4)"
+        },
+        {
+          title: "사건 4. 냉장고 속 딸기 바구니",
+          cat: "상한 딸기를 빼고 싱싱한 딸기만 세어보자!",
+          story: "치즈가 냉장고에서 <span class='clue-chip' onclick='toggleClue(this)'>딸기 14개</span>를 꺼냈습니다. 자세히 보니 <span class='clue-chip' onclick='toggleClue(this)'>6개는 너무 물러서</span> 쓰레기통에 버렸습니다. 버리지 않고 남은 <span class='clue-chip' onclick='toggleClue(this)'>싱싱한 딸기</span>는 몇 개일까요?",
+          quiz: "접시에 담은 싱싱한 딸기는 모두 몇 개인가요?",
+          answer: 8,
+          hint: "전체 14개에서 버린 6개를 빼보세요! (14 - 6)"
+        },
+        {
+          title: "사건 5. 앵무새 피피의 책꽂이 퀴즈",
+          cat: "피피가 싫어하는 색깔은 빼고 계산해야 해!",
+          story: "앵무새 피피가 외쳤습니다. \"책꽂이에 <span class='clue-chip' onclick='toggleClue(this)'>빨간 책 7권</span>, 파란 책 9권, <span class='clue-chip' onclick='toggleClue(this)'>노란 책 6권</span>이 있지! 나는 파란색은 싫어해! <span class='clue-chip' onclick='toggleClue(this)'>빨간 책과 노란 책만</span> 합친 수가 비밀번호야!\"",
+          quiz: "빨간 책과 노란 책은 모두 몇 권인가요?",
+          answer: 13,
+          hint: "파란 책(9권)은 빼고, 빨간 책(7권)과 노란 책(6권)만 더하세요!"
+        },
+        {
+          title: "사건 6. 다락방 낡은 일기장",
+          cat: "가장 많이 먹은 날과 가장 적게 먹은 날을 찾아보자!",
+          story: "일기장에 지난주 간식 기록이 적혀 있습니다. \"월요일에는 참치캔을 <span class='clue-chip' onclick='toggleClue(this)'>4개</span>, 수요일에는 <span class='clue-chip' onclick='toggleClue(this)'>10개</span>, 금요일에는 6개 먹었다.\" <span class='clue-chip' onclick='toggleClue(this)'>가장 많이 먹은 날</span>과 <span class='clue-chip' onclick='toggleClue(this)'>가장 적게 먹은 날</span>의 개수를 더하세요.",
+          quiz: "가장 많이 먹은 날(10개)과 가장 적게 먹은 날(4개)의 합은 얼마인가요?",
+          answer: 14,
+          hint: "금요일(6개)은 빼고, 가장 큰 수 10과 가장 작은 수 4를 더하세요!"
+        },
+        {
+          title: "사건 7. 베란다 꽃밭의 나비",
+          cat: "나비가 모두 몇 마리인지 세어보자!",
+          story: "베란다 꽃밭에 <span class='clue-chip' onclick='toggleClue(this)'>나비 8마리</span>가 앉아 있었습니다. 조금 뒤 <span class='clue-chip' onclick='toggleClue(this)'>7마리가 더 날아왔습니다.</span> 옆 화분의 무당벌레 3마리는 날아갔지만, 나비들은 모두 남아 있습니다.",
+          quiz: "꽃밭에 남아 있는 나비는 모두 몇 마리인가요?",
+          answer: 15,
+          hint: "무당벌레는 빼고, 나비 8마리와 7마리를 더하세요! (8 + 7)"
+        },
+        {
+          title: "사건 8. 세탁실 양말 정리",
+          cat: "서랍에 넣고 보리에게 준 뒤 남은 양말을 구해보자!",
+          story: "바구니에 양말이 <span class='clue-chip' onclick='toggleClue(this)'>15짝</span> 있었습니다. 치즈가 <span class='clue-chip' onclick='toggleClue(this)'>4짝은 서랍에 넣고</span>, <span class='clue-chip' onclick='toggleClue(this)'>3짝은 보리에게 주었습니다.</span> 바구니에 남은 양말은 몇 짝일까요?",
+          quiz: "바구니에 남아 있는 양말은 몇 짝인가요?",
+          answer: 8,
+          hint: "15에서 4를 빼면 11이 되고, 거기서 다시 3을 빼보세요! (15 - 4 - 3)"
+        },
+        {
+          title: "사건 9. 거북이 할아버지의 조약돌",
+          cat: "떨어뜨린 것과 새로 주운 것을 차례대로 계산해 보자!",
+          story: "거북이 할아버지가 말씀하셨습니다. \"내가 <span class='clue-chip' onclick='toggleClue(this)'>조약돌 12개</span>를 주웠는데, 오는 길에 <span class='clue-chip' onclick='toggleClue(this)'>5개를 떨어뜨렸단다.</span> 하지만 집 앞에서 <span class='clue-chip' onclick='toggleClue(this)'>6개를 새로 주웠지!</span>\"",
+          quiz: "거북이 할아버지가 지금 가진 조약돌은 모두 몇 개인가요?",
+          answer: 13,
+          hint: "12에서 5를 빼면 7개! 여기에 새로 주운 6개를 더하세요. (12 - 5 + 6)"
+        },
+        {
+          title: "사건 10. 마지막 간식 창고 문!",
+          cat: "드디어 마지막 문제야! 창고 안의 간식을 모두 더해 보자!",
+          story: "창고 문 안내판: \"창고 안에는 <span class='clue-chip' onclick='toggleClue(this)'>참치캔 9개</span>와 <span class='clue-chip' onclick='toggleClue(this)'>닭가슴살 6개</span>가 있습니다. 밖에 있는 빈 상자 4개는 무시하고, 창고 안의 <span class='clue-chip' onclick='toggleClue(this)'>전체 간식 수</span>를 입력하세요!\"",
+          quiz: "창고 안에 있는 참치캔과 닭가슴살은 모두 몇 개인가요?",
+          answer: 15,
+          hint: "빈 상자 4개는 빼고, 참치캔 9개와 닭가슴살 6개를 더하세요! (9 + 6)"
+        }
+      ],
+
+      // 🚀 베테랑 탐정 코스 (도전: 합이 20을 넘는 두 자리 수 연산)
+      hard: [
+        {
+          title: "사건 1. 대용량 간식 택배",
+          cat: "두 상자의 간식 합계를 구해보자!",
+          story: "현관에 택배 상자 두 개가 왔습니다. 첫 번째 상자에는 <span class='clue-chip' onclick='toggleClue(this)'>고구마 15개</span>, 두 번째 상자에는 <span class='clue-chip' onclick='toggleClue(this)'>멸치 14개</span>가 들어 있습니다. 사은품 장난감 쥐 8개는 빼고 두 상자의 간식 합계를 입력하세요.",
+          quiz: "장난감 쥐를 제외하고 간식은 모두 몇 개인가요?",
+          answer: 29,
+          hint: "장난감 쥐 8개는 빼고, 고구마(15개)와 멸치(14개)를 더하세요! (15 + 14)"
+        },
+        {
+          title: "사건 2. 책장 위 비밀 저금통",
+          cat: "어제와 오늘 모은 돈을 합쳐보자!",
+          story: "어제까지 저금통에 <span class='clue-chip' onclick='toggleClue(this)'>18원</span>이 있었는데, 오늘 아침에 <span class='clue-chip' onclick='toggleClue(this)'>9원</span>을 더 찾았습니다. 동생이 빌려달라고 한 5원은 아직 주지 않았으니 저금통 안에 그대로 있습니다.",
+          quiz: "지금 저금통 안에 들어 있는 돈은 모두 얼마인가요?",
+          answer: 27,
+          hint: "동생에게 아직 5원을 주지 않았어요! 18원과 9원을 더하세요. (18 + 9)"
+        },
+        {
+          title: "사건 3. 부엌의 구운 쿠키",
+          cat: "나누어 주고 남은 쿠키를 계산해 보자!",
+          story: "갓 구운 <span class='clue-chip' onclick='toggleClue(this)'>초코 쿠키 35개</span>가 있었습니다. 이웃집 고양이들에게 <span class='clue-chip' onclick='toggleClue(this)'>12개를 나누어 주었습니다.</span> 접시에 남은 쿠키 수를 입력하세요.",
+          quiz: "나누어 주고 남은 초코 쿠키는 몇 개인가요?",
+          answer: 23,
+          hint: "처음 구운 35개에서 나누어 준 12개를 빼보세요! (35 - 12)"
+        },
+        {
+          title: "사건 4. 사과와 배 배달 상자",
+          cat: "배는 빼고 모든 사과의 개수만 합쳐보자!",
+          story: "상자 안에 빨간 <span class='clue-chip' onclick='toggleClue(this)'>사과 17개</span>, 노란 배 11개, 초록 <span class='clue-chip' onclick='toggleClue(this)'>풋사과 8개</span>가 들어 있습니다. 배는 따로 보관하고, 모든 사과의 개수만 합치세요.",
+          quiz: "빨간 사과와 풋사과를 합치면 사과는 모두 몇 개인가요?",
+          answer: 25,
+          hint: "노란 배(11개)는 빼고, 빨간 사과(17개)와 풋사과(8개)만 더하세요! (17 + 8)"
+        },
+        {
+          title: "사건 5. 도서관 책 반납 추리",
+          cat: "반납하고 집에 남은 책이 몇 권인지 알아내자!",
+          story: "지난주 도서관에서 책을 모두 <span class='clue-chip' onclick='toggleClue(this)'>32권</span> 빌렸습니다. 어제 다 읽은 <span class='clue-chip' onclick='toggleClue(this)'>9권을 먼저 반납</span>했습니다. 아직 집에 남아 있는 책은 몇 권일까요?",
+          quiz: "반납하고 아직 집에 남아 있는 책은 몇 권인가요?",
+          answer: 23,
+          hint: "전체 32권에서 반납한 9권을 빼보세요! (32 - 9)"
+        },
+        {
+          title: "사건 6. 다락방 보물 상자 구슬",
+          cat: "깨진 구슬은 버리고 온전한 구슬만 세어보자!",
+          story: "상자에서 파란 구슬 <span class='clue-chip' onclick='toggleClue(this)'>16개</span>, 빨간 구슬 <span class='clue-chip' onclick='toggleClue(this)'>15개</span>, 깨진 구슬 4개가 나왔습니다. 깨진 구슬은 버리고 파란 구슬과 빨간 구슬을 합친 수를 누르세요.",
+          quiz: "파란 구슬과 빨간 구슬을 합치면 모두 몇 개인가요?",
+          answer: 31,
+          hint: "깨진 구슬 4개는 제외하고 파란 구슬(16개)과 빨간 구슬(15개)을 더하세요! (16 + 15)"
+        },
+        {
+          title: "사건 7. 스티커 수집 대회 결과",
+          cat: "1등과 3등의 스티커 수를 더해 보자!",
+          story: "보리는 <span class='clue-chip' onclick='toggleClue(this)'>19장</span>, 피피는 <span class='clue-chip' onclick='toggleClue(this)'>24장</span>, 거북이는 <span class='clue-chip' onclick='toggleClue(this)'>12장</span>을 모았습니다. 1등의 스티커 수와 3등의 스티커 수를 더한 값이 암호입니다.",
+          quiz: "1등(24장)과 3등(12장)의 스티커 합은 얼마인가요?",
+          answer: 36,
+          hint: "2등 보리(19장)는 빼고 1등 피피(24장)와 3등 거북이(12장)를 더하세요! (24 + 12)"
+        },
+        {
+          title: "사건 8. 정원 연못의 개구리",
+          cat: "들어온 개구리와 돌아간 개구리를 차례로 계산하자!",
+          story: "연못에 <span class='clue-chip' onclick='toggleClue(this)'>개구리 28마리</span>가 있었습니다. <span class='clue-chip' onclick='toggleClue(this)'>7마리가 새로 뛰어들었지만</span>, <span class='clue-chip' onclick='toggleClue(this)'>5마리는 집으로 돌아갔습니다.</span> 연못에 남은 개구리는 몇 마리일까요?",
+          quiz: "지금 연못에 남아 있는 개구리는 몇 마리인가요?",
+          answer: 30,
+          hint: "28마리에 7마리를 더하면 35마리! 거기서 돌아간 5마리를 빼보세요. (28 + 7 - 5)"
+        },
+        {
+          title: "사건 9. 꼬마 기차의 승객 수",
+          cat: "역을 지날 때마다 탄 승객을 모두 더해 보자!",
+          story: "기차가 출발역에서 <span class='clue-chip' onclick='toggleClue(this)'>19명</span>을 태우고 출발했습니다. 첫 번째 역에서 <span class='clue-chip' onclick='toggleClue(this)'>8명이 탔고</span>, 두 번째 역에서 <span class='clue-chip' onclick='toggleClue(this)'>6명이 더 탔습니다.</span> 전체 승객 수를 입력하세요.",
+          quiz: "기차에 타고 있는 전체 승객은 모두 몇 명인가요?",
+          answer: 33,
+          hint: "19 + 8 + 6을 순서대로 더해 보세요! (19 + 8 = 27, 27 + 6 = 33)"
+        },
+        {
+          title: "사건 10. 간식 창고 최종 금고!",
+          cat: "마지막 문제야! 통조림 합계에서 꺼내 놓은 것을 빼보자!",
+          story: "창고에 <span class='clue-chip' onclick='toggleClue(this)'>참치캔 26개</span>와 <span class='clue-chip' onclick='toggleClue(this)'>연어캔 18개</span>가 있습니다. 파티를 위해 <span class='clue-chip' onclick='toggleClue(this)'>9개를 미리 꺼내 놓았다면</span>, 창고에 남아 있는 통조림은 몇 개일까요?",
+          quiz: "창고에 남아 있는 통조림은 모두 몇 개인가요?",
+          answer: 35,
+          hint: "26과 18을 더하면 44개! 여기서 미리 꺼낸 9개를 빼보세요. (26 + 18 - 9)"
+        }
+      ]
+    };
+
+    // ==========================================
+    // 4. 게임 상태 및 화면 전환 제어
+    // ==========================================
+    let currentMode = 'easy';
+    let currentIndex = 0;
+    let isTransitioning = false;
+
+    function goHome() {
+      playSound('click');
+      isTransitioning = false;
+      document.getElementById('modeBadge').classList.add('hidden');
+      document.getElementById('stageBadge').textContent = '코스 선택';
+      document.getElementById('progressBar').style.width = '0%';
+
+      document.getElementById('startScreen').classList.remove('hidden');
+      document.getElementById('playScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.add('hidden');
+    }
+
+    function startGame(mode) {
+      playSound('click');
+      currentMode = mode;
+      currentIndex = 0;
+      isTransitioning = false;
+
+      const modeBadge = document.getElementById('modeBadge');
+      modeBadge.classList.remove('hidden', 'bg-emerald-600', 'bg-rose-600');
+      if (mode === 'easy') {
+        modeBadge.textContent = '🌱 기초 탐정';
+        modeBadge.classList.add('bg-emerald-600');
+      } else {
+        modeBadge.textContent = '🚀 베테랑 탐정';
+        modeBadge.classList.add('bg-rose-600');
+      }
+
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.add('hidden');
+      document.getElementById('playScreen').classList.remove('hidden');
+
+      renderStage();
+    }
+
+    function restartCurrent() {
+      startGame(currentMode);
+    }
+
+    function renderStage() {
+      const list = gameData[currentMode];
+      const item = list[currentIndex];
+
+      document.getElementById('stageBadge').textContent = `${currentIndex + 1} / ${list.length}단계`;
+      document.getElementById('progressBar').style.width = `${(currentIndex / list.length) * 100}%`;
+
+      document.getElementById('playCatSvg').innerHTML = getCatSVG(false);
+      document.getElementById('catSpeech').textContent = item.cat;
+      document.getElementById('storyTitle').textContent = item.title;
+      document.getElementById('storyBody').innerHTML = item.story;
+      document.getElementById('quizTitle').textContent = item.quiz;
+
+      const inputEl = document.getElementById('answerInput');
+      inputEl.value = '';
+      inputEl.focus();
+
+      const fb = document.getElementById('feedbackBox');
+      fb.className = 'hidden mt-4 p-3.5 rounded-2xl text-base sm:text-lg font-bold break-keep';
+      fb.textContent = '';
+    }
+
+    // 핵심 단서 클릭 시 노란 형광펜 밑줄 토글
+    function toggleClue(el) {
+      playSound('click');
+      el.classList.toggle('checked');
+    }
+
+    // 정답 확인 로직
+    function checkAnswer() {
+      if (isTransitioning) return;
+
+      const list = gameData[currentMode];
+      const item = list[currentIndex];
+      const inputEl = document.getElementById('answerInput');
+      const val = parseInt(inputEl.value, 10);
+      const fb = document.getElementById('feedbackBox');
+
+      if (isNaN(val)) {
+        playSound('err');
+        fb.className = 'mt-4 p-3.5 rounded-2xl text-base sm:text-lg font-bold break-keep bg-rose-50 text-rose-700 border-2 border-rose-200 animate-shake';
+        fb.textContent = '✏️ 네모 칸에 숫자를 먼저 입력해 주세요!';
+        inputEl.focus();
+        return;
+      }
+
+      if (val === item.answer) {
+        isTransitioning = true;
+        playSound('ok');
+        document.getElementById('playCatSvg').innerHTML = getCatSVG(true);
+
+        fb.className = 'mt-4 p-3.5 rounded-2xl text-base sm:text-lg font-bold break-keep bg-emerald-50 text-emerald-800 border-2 border-emerald-300 animate-pop';
+        fb.textContent = '🎉 정답이야! 이야기를 정확히 이해했구나! 다음 사건으로 이동할게!';
+
+        setTimeout(() => {
+          isTransitioning = false;
+          currentIndex++;
+          if (currentIndex < list.length) {
+            renderStage();
+          } else {
+            showWinScreen();
+          }
+        }, 1150);
+      } else {
+        playSound('err');
+        fb.className = 'mt-4 p-3.5 rounded-2xl text-base sm:text-lg font-bold break-keep bg-rose-50 text-rose-700 border-2 border-rose-200 animate-shake';
+        fb.textContent = `❌ 다시 한번 이야기를 읽어보자! 힌트: ${item.hint}`;
+        inputEl.focus();
+        inputEl.select();
+      }
+    }
+
+    function showWinScreen() {
+      playSound('win');
+      document.getElementById('stageBadge').textContent = '10단계 완료!';
+      document.getElementById('progressBar').style.width = '100%';
+
+      document.getElementById('playScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.remove('hidden');
+
+      const certTitle = document.getElementById('certificateTitle');
+      certTitle.textContent = currentMode === 'easy'
+        ? '🌱 명예 기초 탐정 임명장'
+        : '🚀 최고 베테랑 탐정 임명장';
+    }
+
+    // 엔터키 입력 지원
+    document.getElementById('answerInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        checkAnswer();
+      }
+    });
+  </script>
+</body>
+</html>
